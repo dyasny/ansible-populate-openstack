@@ -1,0 +1,237 @@
+#!/usr/bin/env ansible-playbook
+---
+
+# This playbook demonstrates how to create a network, subnet and router on the
+# Catalyst Cloud. Ansible will pick up the OpenStack environment variables from
+# the operating system if an OpenStack RC file is sourced before running the
+# playbook. Alternatively, you can specify the OpenStack authentication
+# variables and refer to them when using the os_auth module.
+
+- name: Deploy a cloud instance in OpenStack
+  hosts: localhost
+  vars:
+    os_auth_url: "{{ lookup('env','OS_AUTH_URL') }}"
+    os_region: "regionOne"
+    oc_cloud_name: "{{ lookup('env','OS_CLOUDNAME') }}"
+    os_project_name: "admin"
+    os_username: "{{ lookup('env','OS_USERNAME') }}"
+    os_password: "{{ lookup('env','OS_PASSWORD') }}"
+    # Required variables
+    #     ssh_public_key: "/home/stack/.ssh/id_rsa.pub"
+    #     # OpenStack authentication variables (not required if RC sourced)
+    #os_auth_url: https://keystone.endpoint.net:5000/v2.0
+    #os_region: regionOne
+    #os_az: some_az
+    #os_project_name: projectname
+    #os_username: username
+    #os_password: password
+    # Required variables
+    ssh_public_key: /home/stack/.ssh/id_rsa.pub
+
+  tasks:
+
+    # Set up an auth dir for shade
+    - file: path=~/.config/openstack/ state=directory mode=0755
+    
+    - name: insert cerdentials into shade config
+      blockinfile:
+        create: yes
+        dest: ~/.config/openstack/clouds.yml
+        block: |
+          clouds:
+            overcloud:
+              auth:
+                auth_url: "{{ os_auth_url }}"
+                username: "{{ os_username }}"
+                password: "{{ os_password }}"
+                project_name: admin
+
+
+    # If you have sourced an OpenStack RC file, connecting to the 
+    # Cloud is as simple as running the os_auth module with no additional
+    # parameters.
+    - name: Connect to the Cloud
+      os_auth:
+      
+    # If you have not sourced an OpenStack RC file, you will need to pass a few
+    # mandatory authentication attributes, as demonstrated below.
+    #- name: Connect to the Catalyst Cloud
+    #  os_auth:
+        auth:
+          auth_url: "{{ os_auth_url }}"
+          username: "{{ os_username }}"
+          password: "{{ os_password }}"
+          project_name: "{{ os_project_name }}"
+
+
+    # ---Keystone level resources---
+
+    - name: Create tenants/projects
+      os_project:
+        state: present
+        name: demoproject1
+        description: demodescription1
+        enabled: True
+     
+      os_project: 
+        state: present
+        name: demoproject2
+        description: demodescription2
+        enabled: True
+
+    - name: Create a user for each project
+      os_user:
+        cloud: overcloud
+        state: present
+        name: demouser1
+        password: secret1
+        email: demo1@example.com
+        default_project: demoproject1
+      os_user:
+        cloud: overcloud
+        state: present
+        name: demouser2
+        password: secret2
+        email: demo2@example.com
+        default_project: demoproject2
+
+ #   # Object resources
+    #- name: Create a test object file
+    #  shell: mktemp
+    #  register: tmp_file
+
+    - name: Create container
+      os_object:
+        cloud: overcloud
+        state: present
+        container: democontainer
+        container_access: private
+
+    - name: Put object
+      os_object:
+        cloud: overcloud
+        state: present
+        name: demoobject
+     #   filename: "{{ tmp_file.stdout }}"
+     # To avoid check creating a temp file or failing, use an existing file
+        filename: /home/stack/overcloudrc
+        container: democontainer
+
+
+  # Images tasks
+  
+    - name: Download cirros
+      get_url: 
+        url: http://download.cirros-cloud.net/0.3.4/cirros-0.3.4-x86_64-disk.img
+        dest: /home/stack/cirros.img
+
+    - name: Upload an image from a local file named cirros.img
+      os_image:
+        cloud: overcloud
+        name: cirros
+        container_format: bare
+        disk_format: qcow2
+        state: present
+        filename: /home/stack/cirros.img
+        kernel: cirros-vmlinuz
+        ramdisk: cirros-initrd
+        properties:
+          cpu_arch: x86_64
+          distro: ubuntu
+
+  # Network tasks
+  
+    - name: Create a network
+      os_network:
+        state: present
+        name: demo-net
+
+    - name: Create a subnet
+      os_subnet:
+        state: present
+        name: demo-subnet
+        network_name: demo-net
+        cidr: 192.168.25.0/24
+        dns_nameservers:
+          - 10.11.5.19
+          - 8.8.8.8
+        allocation_pool_start: 192.168.25.100 
+        allocation_pool_end: 192.168.25.150
+
+    - name: Create a router
+      os_router:
+        state: present
+        name: demo-router
+        network: public
+        interfaces:
+          - demo-subnet
+
+    - name: Create a security group
+      os_security_group:
+        state: present
+        name: demo-secgroup
+        description: network access for our first instance.
+
+    - name: Create a security group rule for SSH access
+      os_security_group_rule:
+        state: present
+        security_group: demo-secgroup
+        protocol: tcp
+        port_range_min: 22
+        port_range_max: 22
+        remote_ip_prefix: 0.0.0.0/0
+
+    - name: Create a security group rule for ICMP
+      os_security_group_rule:
+        state: present
+        security_group: demo-secgroup
+        protocol: icmp
+        port_range_min: 22
+        port_range_max: 22
+        remote_ip_prefix: 0.0.0.0/0
+
+  # Volumes tasks
+
+    - name: Create a volume
+      os_volume:
+        state: present
+        cloud: overcloud
+        size: 1
+        display_name: demovolume
+
+  # Instances tasks
+
+    - name: Import an SSH keypair
+      os_keypair:
+        state: present
+        name: demokey
+        public_key_file: "{{ ssh_public_key }}"
+
+    - name: Create a compute instance
+      os_server:        
+        state: present
+        name: demoinstance
+        image: cirros
+        key_name: demokey
+        flavor: m1.tiny
+        nics:
+          - net-name: demo-net
+        security_groups: default,demo-secgroup
+
+    - name: Assign a floating IP
+      os_floating_ip:
+        server: demoinstance
+      register: floating_ip_info
+
+    - name: Output floating IP
+      debug:
+        var: floating_ip_info.floating_ip.floating_ip_address
+
+    - name: Attach a volume to instance
+      os_server_volume:
+        state: present
+        cloud: overcloud
+        server: demoinstance
+        volume: demovolume
+        device: /dev/vdb
+

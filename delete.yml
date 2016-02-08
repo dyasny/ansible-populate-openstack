@@ -1,0 +1,150 @@
+#!/usr/bin/env ansible-playbook
+---
+
+
+- name: Clean up Openstack after demo population 
+  hosts: localhost
+  vars:
+    os_auth_url: "{{ lookup('env','OS_AUTH_URL') }}"
+    os_region: "regionOne"
+    oc_cloud_name: "{{ lookup('env','OS_CLOUDNAME') }}"
+    os_project_name: "admin"
+    os_username: "{{ lookup('env','OS_USERNAME') }}"
+    os_password: "{{ lookup('env','OS_PASSWORD') }}"
+    ssh_public_key: /home/stack/.ssh/id_rsa.pub
+
+  tasks:
+
+    # Set up an auth dir for shade
+    - file: path=~/.config/openstack/ state=directory mode=0755
+    
+    - name: insert cerdentials into shade config
+      blockinfile:
+        create: yes
+        dest: ~/.config/openstack/clouds.yml
+        block: |
+          clouds:
+            overcloud:
+              auth:
+                auth_url: "{{ os_auth_url }}"
+                username: "{{ os_username }}"
+                password: "{{ os_password }}"
+                project_name: admin
+
+
+    # If you have sourced an OpenStack RC file, connecting to the 
+    # Cloud is as simple as running the os_auth module with no additional
+    # parameters.
+    - name: Connect to the Cloud
+      os_auth:
+      
+    # If you have not sourced an OpenStack RC file, you will need to pass a few
+    # mandatory authentication attributes, as demonstrated below.
+    #- name: Connect to the Catalyst Cloud
+    #  os_auth:
+        auth:
+          auth_url: "{{ os_auth_url }}"
+          username: "{{ os_username }}"
+          password: "{{ os_password }}"
+          project_name: "{{ os_project_name }}"
+
+
+
+
+
+  # Instances tasks
+
+    - name: Detach a volume from instance
+      os_server_volume:
+        state: absent
+        cloud: overcloud
+        server: demoinstance
+        volume: demovolume
+
+    - name: Delete the instance
+      os_server:
+        state: absent
+        name: demoinstance
+
+    - name: Import an SSH keypair
+      os_keypair:
+        state: absent
+        name: demokey
+
+  # Images tasks
+
+    - name: Upload an image from a local file named cirros.img
+      os_image:
+        cloud: overcloud
+        name: cirros
+        state: absent
+
+ #   # Object resources
+
+    - name: Remove object
+      os_object:
+        cloud: overcloud
+        state: absent
+        name: demoobject
+        container: democontainer
+
+    - name: Delete container
+      os_object:
+        cloud: overcloud
+        state: absent
+        container: democontainer
+
+  # Volumes tasks
+
+    - name: Delete a volume
+      os_volume:
+        state: absent
+        cloud: overcloud
+        display_name: demovolume
+
+  # Network tasks
+
+    - name: Delete router
+      os_router:
+        state: absent
+        name: demo-router
+
+    - name: Delete subnet
+      os_subnet:
+        state: absent
+        name: demo-subnet
+        network_name: demo-net
+
+    - name: Delete network
+      os_network:
+        state: absent
+        name: demo-net
+
+    - name: Delete a security group
+      os_security_group:
+        state: absent
+        name: demo-secgroup
+
+
+    # ---Keystone level resources---
+
+
+    - name: Delete Users 
+      os_user:
+        cloud: overcloud
+        state: absent
+        name: demouser1
+      os_user:
+        cloud: overcloud
+        state: absent
+        name: demouser2
+
+    - name: Delete tenants/projects
+      os_project:
+        state: absent
+        name: demoproject1
+
+      os_project:
+        state: absent
+        name: demoproject2
+
