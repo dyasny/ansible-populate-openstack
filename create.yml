@@ -133,12 +133,42 @@
 
   # Network tasks
   
-    - name: Create a network
+    - name: Create a public network
+      os_network:
+        state: present
+        name: public
+        state: present
+        external: true
+
+    - name: Create a public subnet
+      os_subnet:
+        state: present
+        name: public
+        network_name: public
+        cidr: 192.168.200.0/24
+        dns_nameservers:
+          - 10.11.5.19
+          - 8.8.8.8
+        allocation_pool_start: 192.168.200.100
+        allocation_pool_end: 192.168.200.150
+        host_routes:
+        - destination: 0.0.0.0/0
+          nexthop: 192.168.200.180
+
+
+    - name: Create a demo router
+      os_router:
+        state: present
+        name: demo-router
+        network: public
+        interfaces:
+          - demo-subnet
+   - name: Create a demo network
       os_network:
         state: present
         name: demo-net
 
-    - name: Create a subnet
+    - name: Create a demo subnet
       os_subnet:
         state: present
         name: demo-subnet
@@ -150,7 +180,7 @@
         allocation_pool_start: 192.168.25.100 
         allocation_pool_end: 192.168.25.150
 
-    - name: Create a router
+    - name: Create a demo router
       os_router:
         state: present
         name: demo-router

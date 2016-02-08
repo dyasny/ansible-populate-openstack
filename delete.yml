@@ -12,6 +12,9 @@
     os_username: "{{ lookup('env','OS_USERNAME') }}"
     os_password: "{{ lookup('env','OS_PASSWORD') }}"
     ssh_public_key: /home/stack/.ssh/id_rsa.pub
+  
+  vars_files:
+    - vars/vars.yml
 
   tasks:
 
@@ -133,18 +136,12 @@
       os_user:
         cloud: overcloud
         state: absent
-        name: demouser1
-      os_user:
-        cloud: overcloud
-        state: absent
-        name: demouser2
+        name: "{{ item.name }}"
+      with_items: "{{ users }}" 
 
     - name: Delete tenants/projects
       os_project:
         state: absent
-        name: demoproject1
-
-      os_project:
-        state: absent
-        name: demoproject2
+        name: "{{ item.name }}"
+      with_items: "{{ projects }}" 
 
