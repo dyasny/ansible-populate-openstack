@@ -27,6 +27,9 @@
     #os_password: password
     # Required variables
     ssh_public_key: /home/stack/.ssh/id_rsa.pub
+  
+  vars_files:
+    - vars/vars.yml
 
   tasks:
 
@@ -55,7 +58,6 @@
       
     # If you have not sourced an OpenStack RC file, you will need to pass a few
     # mandatory authentication attributes, as demonstrated below.
-    #- name: Connect to the Catalyst Cloud
     #  os_auth:
         auth:
           auth_url: "{{ os_auth_url }}"
@@ -63,42 +65,32 @@
           password: "{{ os_password }}"
           project_name: "{{ os_project_name }}"
 
-
     # ---Keystone level resources---
 
     - name: Create tenants/projects
-      os_project:
-        state: present
-        name: demoproject1
-        description: demodescription1
-        enabled: True
-     
       os_project: 
-        state: present
-        name: demoproject2
-        description: demodescription2
+        name: "{{ item.name }}" 
+        state: present 
+        description: "{{ item.description }}"
         enabled: True
+      with_items: "{{ projects }}" 
+
 
     - name: Create a user for each project
       os_user:
         cloud: overcloud
         state: present
-        name: demouser1
-        password: secret1
-        email: demo1@example.com
-        default_project: demoproject1
-      os_user:
-        cloud: overcloud
-        state: present
-        name: demouser2
-        password: secret2
-        email: demo2@example.com
-        default_project: demoproject2
-
- #   # Object resources
+        name: "{{ item.name }}"
+        password: "{{ item.password }}"
+        email: "{{ item.email }}"
+        default_project: "{{ item.default_project }}"
+      with_items: "{{ users }}"
+ 
+    # Object resources
     #- name: Create a test object file
     #  shell: mktemp
     #  register: tmp_file
+    #  Instead, we use a known file
 
     - name: Create container
       os_object:

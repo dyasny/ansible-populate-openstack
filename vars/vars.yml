@@ -1,0 +1,18 @@
+---
+
+- projects:
+  - name: demoproject1
+    description: demodescription1
+  - name: demoproject2
+    description: demodescription2
+
+- users:
+  - name: demouser1
+    password: pass1
+    email: demo1@example.com
+    default_project: demoproject1
+  - name: demouser2
+    password: pass2
+    email: demo2@example.com
+    default_project: demoproject2
+

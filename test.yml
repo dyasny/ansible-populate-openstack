@@ -1,0 +1,19 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- name: Deploy a cloud instance in OpenStack
+  hosts: localhost
+  vars:
+    ssh_public_key: /home/stack/.ssh/id_rsa.pub
+  
+  vars_files:
+    - vars/vars.yml
+
+  tasks:
+    - debug: msg="{{ projects }}"
+    
+    - debug: msg="{{ users }}"
+
+    - name: Create tenants/projects
+      os_project: name={{ item.name }} state=present description={{ item.description }}
+      with_items: "{{ projects }}" 
