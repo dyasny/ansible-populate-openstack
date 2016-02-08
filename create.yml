@@ -153,7 +153,7 @@
         allocation_pool_end: 192.168.200.150
         host_routes:
         - destination: 0.0.0.0/0
-          nexthop: 192.168.200.180
+          nexthop: 192.168.200.1
 
     - name: Create a demo network
       os_network:
