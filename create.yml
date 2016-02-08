@@ -155,30 +155,23 @@
         - destination: 0.0.0.0/0
           nexthop: 192.168.200.180
 
-
-    - name: Create a demo router
-      os_router:
-        state: present
-        name: demo-router
-        network: public
-        interfaces:
-          - demo-subnet
-   - name: Create a demo network
+    - name: Create a demo network
       os_network:
         state: present
         name: demo-net
+        state: present
 
     - name: Create a demo subnet
       os_subnet:
         state: present
         name: demo-subnet
         network_name: demo-net
-        cidr: 192.168.25.0/24
+        cidr: 192.168.150.0/24
         dns_nameservers:
           - 10.11.5.19
           - 8.8.8.8
-        allocation_pool_start: 192.168.25.100 
-        allocation_pool_end: 192.168.25.150
+        allocation_pool_start: 192.168.150.100
+        allocation_pool_end: 192.168.150.150
 
     - name: Create a demo router
       os_router:
