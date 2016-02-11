@@ -49,6 +49,15 @@
                 password: "{{ os_password }}"
                 project_name: admin
 
+    - name: Generate dummyfiles for objects
+      blockinfile:
+        create: yes
+        dest: "{{ item.filename }}"
+        block: |
+          I am an object
+          My name is "{{ item.name }}"
+      with_items: "{{ objects }}" 
+
 
     # If you have sourced an OpenStack RC file, connecting to the 
     # Cloud is as simple as running the os_auth module with no additional
@@ -87,123 +96,98 @@
       with_items: "{{ users }}"
  
     # Object resources
-    #- name: Create a test object file
-    #  shell: mktemp
-    #  register: tmp_file
-    #  Instead, we use a known file
 
-    - name: Create container
+    - name: Create containers
       os_object:
         cloud: overcloud
         state: present
-        container: democontainer
+        container: "{{ item.name }}"
         container_access: private
+      with_items: "{{ containers }}"
 
-    - name: Put object
+    - name: Put objects
       os_object:
         cloud: overcloud
         state: present
-        name: demoobject
-     #   filename: "{{ tmp_file.stdout }}"
-     # To avoid check creating a temp file or failing, use an existing file
-        filename: /home/stack/overcloudrc
-        container: democontainer
+        name: "{{ item.name }}"
+        filename: "{{ item.filename }}"
+        container: "{{ item.container }}"
+      with_items: "{{ objects }}"
 
 
   # Images tasks
   
-    - name: Download cirros
+    - name: Download images
       get_url: 
-        url: http://download.cirros-cloud.net/0.3.4/cirros-0.3.4-x86_64-disk.img
-        dest: /home/stack/cirros.img
+        url: "{{ item.url }}"
+        dest: "{{ item.dest }}"
+      with_items: "{{ images }}"
 
-    - name: Upload an image from a local file named cirros.img
+    - name: Upload images
       os_image:
         cloud: overcloud
-        name: cirros
-        container_format: bare
-        disk_format: qcow2
+        name: "{{ item.name }}"
+        container_format: "{{ item.container_format }}"
+        disk_format: "{{ item.disk_format }}"
         state: present
-        filename: /home/stack/cirros.img
-        kernel: cirros-vmlinuz
-        ramdisk: cirros-initrd
+        filename: "{{ item.dest }}"
+        kernel: "{{ item.kernel }}"
+        ramdisk: "{{ item.ramdisk }}"
         properties:
-          cpu_arch: x86_64
-          distro: ubuntu
+          cpu_arch: "{{ item.properties.cpu_arch }}"
+          distro: "{{ item.properties.distro }}"
+      with_items: "{{ images }}"
 
   # Network tasks
   
-    - name: Create a public network
+    - name: Create networks
       os_network:
         state: present
-        name: public
-        state: present
-        external: true
+        name: "{{ item.name }}"
+        external: "{{ item.external }}"
+      with_items: "{{ networks }}"
 
-    - name: Create a public subnet
+    - name: Create subnets
       os_subnet:
         state: present
-        name: public
-        network_name: public
-        cidr: 192.168.200.0/24
-        dns_nameservers:
-          - 10.11.5.19
-          - 8.8.8.8
-        allocation_pool_start: 192.168.200.100
-        allocation_pool_end: 192.168.200.150
+        name: "{{ item.name }}"
+        network_name: "{{ item.network_name }}"
+        cidr: "{{ item.cidr }}"
+        dns_nameservers: "{{ item.dns_nameservers }}"
+        allocation_pool_start: "{{ item.allocation_pool_start }}"
+        allocation_pool_end: "{{ item.allocation_pool_end }}"
         host_routes:
-        - destination: 0.0.0.0/0
-          nexthop: 192.168.200.1
+        - destination: "{{ item.host_routes.destination }}"
+          nexthop: "{{ item.host_routes.nexthop }}"
+      with_items: "{{ subnets }}"
 
-    - name: Create a demo network
-      os_network:
-        state: present
-        name: demo-net
-        state: present
-
-    - name: Create a demo subnet
-      os_subnet:
-        state: present
-        name: demo-subnet
-        network_name: demo-net
-        cidr: 192.168.150.0/24
-        dns_nameservers:
-          - 10.11.5.19
-          - 8.8.8.8
-        allocation_pool_start: 192.168.150.100
-        allocation_pool_end: 192.168.150.150
-
-    - name: Create a demo router
+    - name: Create routers
       os_router:
         state: present
-        name: demo-router
-        network: public
-        interfaces:
-          - demo-subnet
+        name: "{{ item.name }}"
+        network: "{{ item.network }}"
+        interfaces: "{{ item.interfaces }}"
+        # Until the issue is resolved, need to ignore router related problems
+        # https://github.com/ansible/ansible-modules-core/issues/2989
+      ignore_errors: yes
+      with_items: "{{ routers }}" 
 
-    - name: Create a security group
+    - name: Create security groups
       os_security_group:
         state: present
-        name: demo-secgroup
-        description: network access for our first instance.
+        name: "{{ item.name }}"
+        description: "{{ item.description }}"
+      with_items: "{{ security_groups }}"
 
-    - name: Create a security group rule for SSH access
+    - name: Create security group rules
       os_security_group_rule:
         state: present
-        security_group: demo-secgroup
-        protocol: tcp
-        port_range_min: 22
-        port_range_max: 22
-        remote_ip_prefix: 0.0.0.0/0
-
-    - name: Create a security group rule for ICMP
-      os_security_group_rule:
-        state: present
-        security_group: demo-secgroup
-        protocol: icmp
-        port_range_min: 22
-        port_range_max: 22
-        remote_ip_prefix: 0.0.0.0/0
+        security_group: "{{ item.security_group }}"
+        protocol: "{{ item.protocol }}"
+        port_range_min: "{{ item.port_range_min }}"
+        port_range_max: "{{ item.port_range_max }}"
+        remote_ip_prefix: "{{ item.remote_ip_prefix }}"
+      with_items: "{{ security_group_rules }}"
 
   # Volumes tasks
 
@@ -211,42 +195,45 @@
       os_volume:
         state: present
         cloud: overcloud
-        size: 1
-        display_name: demovolume
+        size: "{{ item.size }}"
+        display_name: "{{ item.display_name }}"
+      with_items: "{{ volumes }}"
 
   # Instances tasks
 
-    - name: Import an SSH keypair
+    - name: Import SSH keypairs
       os_keypair:
         state: present
-        name: demokey
-        public_key_file: "{{ ssh_public_key }}"
+        name: "{{ item.name }}"
+        public_key_file: "{{ item.public_key_file }}"
+      with_items: "{{ keypairs }}"
 
-    - name: Create a compute instance
+    - name: Create instances
       os_server:        
         state: present
-        name: demoinstance
-        image: cirros
-        key_name: demokey
-        flavor: m1.tiny
-        nics:
-          - net-name: demo-net
-        security_groups: default,demo-secgroup
+        auto_ip: no #We want to assign floating IPs ourselves
+        auth:
+          auth_url: "{{ os_auth_url }}"
+          username: "{{ item.user }}"
+          password: "{{ item.password }}"
+          project_name: "{{ item.project }}"
+        name: "{{ item.name }}"
+        image: "{{ item.image }}"
+        key_name: "{{ item.key_name }}"
+        flavor: "{{ item.flavor }}"
+        nics: "{{ item.nics }}"
+        security_groups: "{{ item.security_groups }}"
+      with_items: "{{ instances }}"
 
-    - name: Assign a floating IP
+    - name: Assign floating IPs
       os_floating_ip:
-        server: demoinstance
-      register: floating_ip_info
+        server: "{{ item.name }}"
+      with_items: "{{ instances }}"
 
-    - name: Output floating IP
-      debug:
-        var: floating_ip_info.floating_ip.floating_ip_address
-
-    - name: Attach a volume to instance
+    - name: Attach volumes to instances
       os_server_volume:
         state: present
         cloud: overcloud
-        server: demoinstance
-        volume: demovolume
-        device: /dev/vdb
-
+        server: "{{ item.name }}"
+        volume: "{{ item.volume }}"
+      with_items: "{{ instances }}"

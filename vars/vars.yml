@@ -1,18 +1,170 @@
 ---
 
-- projects:
+projects:
   - name: demoproject1
     description: demodescription1
   - name: demoproject2
     description: demodescription2
 
-- users:
+users:
   - name: demouser1
     password: pass1
     email: demo1@example.com
     default_project: demoproject1
+
   - name: demouser2
     password: pass2
     email: demo2@example.com
     default_project: demoproject2
+
+containers:
+  - name: democontainer1
+
+  - name: democontainer2
+    
+objects:
+  - name: demoobject1
+    filename: /home/stack/objectfile1
+
+  - name: demoobject2
+    filename: /home/stack/objectfile2
+
+images: 
+  - name: cirros
+    url: http://download.cirros-cloud.net/0.3.4/cirros-0.3.4-x86_64-disk.img
+    dest: /home/stack/cirros.img
+    container_format: bare
+    disk_format: qcow2
+    kernel: cirros-vmlinuz
+    ramdisk: cirros-initrd
+    properties: 
+      cpu_arch: x86_64
+      distro: ubuntu
+
+networks:
+  - name: public
+    external: true
+
+  - name: demo-net1
+    external: false
+
+  - name: demo-net2
+    external: false
+
+subnets:
+  - name: public
+    network_name: public
+    cidr: 192.168.200.0/24
+    dns_nameservers:
+      - 10.11.5.19
+      - 8.8.8.8
+    allocation_pool_start: 192.168.200.100
+    allocation_pool_end: 192.168.200.150
+    host_routes:
+      - destination: 0.0.0.0/0
+        nexthop: 192.168.200.1
+
+  - name: demo-subnet1
+    network_name: demo-net
+    cidr: 192.168.150.0/24
+    dns_nameservers:
+      - 10.11.5.19
+      - 8.8.8.8
+    allocation_pool_start: 192.168.150.100
+    allocation_pool_end: 192.168.150.150
+
+  - name: demo-subnet2
+    network_name: demo-net2
+    cidr: 192.168.160.0/24
+    dns_nameservers:
+      - 10.11.5.19
+      - 8.8.8.8
+    allocation_pool_start: 192.168.160.100
+    allocation_pool_end: 192.168.160.150
+
+
+routers:
+  - name: demo-router1
+    network: public
+    interfaces:
+      - demo-subnet1
+
+  - name: demo-router2
+    network: public
+    interfaces:
+      - demo-subnet2
+    
+security_groups:
+  - name: demo-secgroup1
+    description: some demo text
+
+  - name: demo-secgroup2
+    description: some more demo text
+
+security_group_rules:
+  - name: Rule for SSH
+    security_group: demo-secgroup1
+    protocol: tcp
+    port_range_min: 22
+    port_range_max: 22
+    remote_ip_prefix: 0.0.0.0/0
+
+  - name: Rule for ICMP
+    security_group: demo-secgroup1
+    protocol: icmp
+    remote_ip_prefix: 0.0.0.0/0
+
+  - name: Rule for SSH
+    security_group: demo-secgroup2
+    protocol: tcp
+    port_range_min: 22
+    port_range_max: 22
+    remote_ip_prefix: 0.0.0.0/0
+
+  - name: Rule for ICMP
+    security_group: demo-secgroup2
+    protocol: icmp
+    remote_ip_prefix: 0.0.0.0/0
+
+
+volumes:
+  - name: 1Gb volume
+    size: 1
+    display_name: demovolume
+
+keypairs:
+  - name: demokey
+    public_key_file: /home/stack/.ssh/id_rsa.pub
+
+instances:
+  - name: demo1
+    user: demouser1
+    #TODO: make this nicer, when jinja2 allows for better functionality, 
+    #for now things work better when hardcoded
+    #password:  "{{ (users|selectattr('name', 'sameas', demo1)) }}" #|first)['password'] }}"
+    #project: "{{ users|selectattr('name', 'equalto', user).['default_project'] }}"
+    password: pass1
+    project: demoproject1
+    image: cirros
+    key_name: demokey
+    flavor: m1.tiny
+    nics:
+      - net-name: demo-net1
+    security_groups:
+      - demo-secgroup1
+    volume: demovolume
+  
+  - name: demo2
+    user: demouser2
+    password: pass2
+    project: demoproject2
+    image: cirros
+    key_name: demokey
+    flavor: m1.tiny
+    nics: 
+      - net-name: demo-net2
+    security_groups:
+      - demo-secgroup2
+
+
 

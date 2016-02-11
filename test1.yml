@@ -1,0 +1,23 @@
+#!/usr/bin/env ansible-playbook
+---
+
+- name: Deploy a cloud instance in OpenStack
+  hosts: localhost
+  vars:
+    ssh_public_key: /home/stack/.ssh/id_rsa.pub
+  
+  vars_files:
+    - vars/vars.yml
+
+  tasks:
+    
+
+
+      - name: just an echo
+        shell: /bin/echo "{{ item.name }}"
+        with_items: instances
+        register: echo
+        
+      - debug: var=item.stdout
+        with_items: echo.results
+

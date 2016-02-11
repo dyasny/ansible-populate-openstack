@@ -57,76 +57,88 @@
 
   # Instances tasks
 
-    - name: Detach a volume from instance
+    - name: Detach volumes from instance
       os_server_volume:
         state: absent
         cloud: overcloud
-        server: demoinstance
-        volume: demovolume
+        server: "{{ item.name }}"
+        volume: "{{ item.volume }}"
+      with_items: "{{ instances }}"
 
-    - name: Delete the instance
+    - name: Delete the instances
       os_server:
         state: absent
-        name: demoinstance
+        name: "{{ item.name }}"
+      with_items: "{{ instances }}"
 
-    - name: Import an SSH keypair
+    - name: remove imported an SSH keypairs
       os_keypair:
         state: absent
-        name: demokey
+        name: "{{ item.name }}"
+      with_items: "{{ keypairs }}"
 
   # Images tasks
 
-    - name: Upload an image from a local file named cirros.img
+    - name: Delete uploaded images
       os_image:
         cloud: overcloud
-        name: cirros
+        name: "{{ item.name }}"
         state: absent
+      with_items: "{{ images }}"
 
  #   # Object resources
 
-    - name: Remove object
+    - name: Remove objects
       os_object:
         cloud: overcloud
         state: absent
-        name: demoobject
-        container: democontainer
+        name: "{{ item.name }}"
+        container: "{{ item.container }}"
+      with_items: "{{ objects }}"
 
-    - name: Delete container
+    - name: Delete containers
       os_object:
         cloud: overcloud
         state: absent
-        container: democontainer
+        container: "{{ item.name }}"
+      with_items: "{{ containers }}"
 
   # Volumes tasks
 
-    - name: Delete a volume
+    - name: Delete volumes
       os_volume:
         state: absent
         cloud: overcloud
-        display_name: demovolume
+        display_name: "{{ item.name }}"
+      with_items: "{{ volumes }}"
 
   # Network tasks
 
-    - name: Delete router
+    - name: Delete routers
       os_router:
         state: absent
-        name: demo-router
+        name: "{{ item.name }}"
+        ignore_errors: yes
+      with_items: "{{ routers }}"
 
-    - name: Delete subnet
+    - name: Delete subnets
       os_subnet:
         state: absent
-        name: demo-subnet
-        network_name: demo-net
+        name: "{{ item.name }}"
+        network_name: "{{ item.network_name }}"
+      with_items: "{{ subnets }}"
 
-    - name: Delete network
+    - name: Delete networks
       os_network:
         state: absent
-        name: demo-net
+        name: "{{ item.name }}"
+      with_items: "{{ networks }}"
 
-    - name: Delete a security group
+    - name: Delete security groups
       os_security_group:
         state: absent
-        name: demo-secgroup
+        name: "{{ item.name }}"
+      with_items: "{{ security_groups }}"
 
 
     # ---Keystone level resources---
