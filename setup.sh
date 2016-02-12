@@ -9,10 +9,7 @@ sudo yum-config-manager --disable epel
 #create a virtual env for ansible
 cd $HOME
 virtualenv ansible
-source $HOME/ansible/bin/activate
-
-#install ansible and shade from pip
-sudo pip install ansible shade funcsigs
+source $HOME/ansible/bin/activate && pip install ansible shade funcsigs
 
 
 echo Setup complete.
